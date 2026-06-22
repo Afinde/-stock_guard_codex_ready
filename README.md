@@ -32,6 +32,62 @@ uvicorn app.main:app --reload
 python -m app.scheduler
 ```
 
+## 验证与数据库迁移
+
+默认验证不访问互联网，也不启动 PostgreSQL：
+
+```bash
+bash scripts/verify.sh
+```
+
+PostgreSQL 集成测试是显式 opt-in，会启动本地 Docker 测试库并在结束后清理：
+
+```bash
+bash scripts/test_postgres.sh
+```
+
+数据库迁移使用 Alembic。新 PostgreSQL 数据库应先执行迁移；已有库必须先确认
+schema 与基线一致，再执行 stamp：
+
+```bash
+bash scripts/migration_status.sh
+bash scripts/migrate.sh
+```
+
+当前 PostgreSQL 覆盖的是事务一致性、迁移和并发语义测试，不代表容量、压测、高可用或灾备验证已经完成。
+
+LIVE_PAPER 行情只用于 PAPER_TRADING Shadow 验证，默认关闭，不会生成
+PaperFill，也不会修改模拟账户、订单、持仓、资金或交易账本。可选手工联通：
+
+```bash
+bash scripts/test_live_provider.sh
+```
+
+未配置真实行情 Provider 时该脚本会返回非零并明确提示未配置；普通测试和 CI
+不得依赖真实网络或密钥。
+
+Milestone 5.2C 增加了真实行情 Provider 的只读治理闭环：字段映射契约、
+错误分类、密钥脱敏、Provider ShadowRun、准入评估、自动降级事件和日报。
+准入默认至少需要 10 个完整交易日的合格 Shadow 记录，并且仍需人工复核；
+未配置真实 Provider 或观察期不足时，不得将 LIVE_PAPER 视为可用生产行情源。
+
+常用收口命令：
+
+```bash
+python -m app.market_data_runtime --provider live-paper --shadow --once
+python -m app.market_data_runtime --provider live-paper --shadow --report-only
+python -m app.market_data_runtime --admission-status
+python -m app.market_data_runtime --generate-admission-review
+```
+
+运行手册：
+
+- `docs/LIVE_PROVIDER_SETUP.md`
+- `docs/SHADOW_SOAK_RUNBOOK.md`
+- `docs/MARKET_DATA_ADMISSION_REVIEW.md`
+
+当前范围不包含容量、压力、高可用或灾备验证，也不代表生产可用。
+
 ## Codex 推荐开发顺序
 
 1. 在项目根目录启动 Codex，并先让它阅读 `AGENTS.md`，只做仓库审计，不立即改代码。

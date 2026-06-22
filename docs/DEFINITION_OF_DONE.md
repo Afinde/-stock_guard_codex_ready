@@ -40,6 +40,20 @@ A task is complete only when all applicable items are satisfied.
 - Repeated jobs are idempotent where applicable.
 - Failures are logged without leaking secrets.
 - Manual verification steps and rollback notes are documented.
+- Database schema changes include an Alembic migration or an explicit baseline
+  stamp procedure.
+- PostgreSQL transaction changes identify retryable SQLSTATEs and prove rollback
+  behavior with fault-injection or integration tests.
+- LIVE_PAPER quote ingestion remains Shadow-only unless a later, separately
+  approved milestone explicitly changes that boundary.
+- Real-provider connectivity checks must redact secrets, persist only
+  non-sensitive audit metadata, and record account/fill mutation checks; a
+  provider with no configured endpoint or insufficient Shadow history remains
+  `NOT_CONFIGURED` or `OBSERVING`, not production-ready.
+- Real-provider admission requires runbook evidence: a non-faked connectivity
+  result, 10 complete live-provider Shadow trading days, generated daily
+  reports, and a human review package. The system must not auto-approve the
+  provider or expose an API to turn off Shadow in this phase.
 
 ## Review report
 

@@ -107,12 +107,36 @@ Deliverables:
 - Add scheduled pre-market, intraday, and post-market workflows using a real exchange calendar.
 - Add alert deduplication, severity, acknowledgement, retry, and delivery status.
 - Add operational dashboard/API endpoints.
+- Add PostgreSQL opt-in integration tests, Alembic baseline migrations,
+  transaction retry classification, and fault-injection rollback coverage before
+  any production database migration.
+- Add LIVE_PAPER quote-only Shadow ingestion with provider health, quote
+  recording/replay, data-quality metrics, and shadow decisions that never mutate
+  paper account state.
+- Add real-provider connectivity governance with a provider field contract,
+  secret redaction, explicit provider error taxonomy, ShadowRun audit records,
+  market-data admission status, automatic degradation events, and daily Shadow
+  reports. This is still quote-only and Shadow-only.
+- Add the 5.2C closeout tools and runbooks for real-provider connectivity,
+  continuous Shadow observation, complete-day counting, admission progress, and
+  human review package generation.
 
 Acceptance:
 
 - The complete paper account can be reconstructed from the ledger.
 - Re-running a scheduler job does not create duplicate orders or alerts.
 - Paper trading runs for 8–12 weeks before live integration is considered.
+- PostgreSQL tests prove idempotency, rollback, deadlock retry, serialization
+  retry, and migration status behavior without claiming capacity, high
+  availability, or disaster-recovery readiness.
+- LIVE_PAPER Shadow can compare and audit online quotes without creating fills,
+  changing orders, changing positions, changing cash, or writing trading ledger
+  entries.
+- A live provider cannot become eligible without at least 10 complete qualified
+  trading days, passing P0 quality gates, and manual review; no successful API
+  connectivity test alone is sufficient for production admission.
+- Fixture and Recorded data never count toward real-provider observation days.
+  `ELIGIBLE_FOR_REVIEW` still does not disable Shadow or enable fills.
 
 ## Milestone 6 — Frontend and reporting
 
