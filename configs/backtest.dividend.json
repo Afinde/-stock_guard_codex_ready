@@ -1,0 +1,79 @@
+{
+  "calendar": {
+    "end_date": "2026-01-09",
+    "source": "offline_fixture",
+    "start_date": "2025-12-01",
+    "trading_days": ["2026-01-05", "2026-01-06", "2026-01-07", "2026-01-08", "2026-01-09"],
+    "updated_at": "2026-01-01T00:00:00+08:00",
+    "version": "offline-fixture-v1"
+  },
+  "config": {
+    "annualization_days": 244,
+    "benchmark": null,
+    "end_date": "2026-01-09",
+    "execution_price_adjust": "",
+    "initial_cash": "100000",
+    "order_expiry_sessions": 1,
+    "parameter_version": "example",
+    "random_seed": null,
+    "risk_free_rate": "0",
+    "sale_proceeds_reusable_same_day": false,
+    "same_bar_conflict_policy": "WORST_CASE",
+    "signal_price_adjust": "qfq",
+    "start_date": "2026-01-05",
+    "strategy_name": "fixture_strategy",
+    "strategy_version": "1.0.0",
+    "symbols": ["600519"],
+    "volume_participation_rate": "0.10"
+  },
+  "instrument_rules": {
+    "600519": {
+      "allow_odd_lot_sell": true,
+      "board": "MAIN",
+      "delisting_date": null,
+      "exchange": "SSE",
+      "is_st": false,
+      "listing_date": "2001-08-27",
+      "lot_size": 100,
+      "metadata_version": "fixture-rules-v1",
+      "price_limit_rule": "0.10",
+      "price_tick": "0.01",
+      "settlement_rule": "T+1"
+    }
+  },
+  "corporate_actions": [
+    {
+      "action_id": "",
+      "symbol": "600519",
+      "action_type": "CASH_DIVIDEND",
+      "announcement_date": "2026-01-05",
+      "record_date": "2026-01-07",
+      "ex_date": "2026-01-08",
+      "payment_date": "2026-01-08",
+      "tradable_date": null,
+      "cash_per_share": "0.10",
+      "source": "offline_fixture",
+      "source_version": "dividend-v1"
+    }
+  ],
+  "market_data": {
+    "600519": [
+      {"close": "10.00", "date": "2026-01-02", "high": "10.20", "low": "9.80", "open": "10.00", "volume": 10000},
+      {"close": "10.20", "date": "2026-01-05", "high": "10.30", "low": "9.90", "open": "10.00", "volume": 10000},
+      {"close": "10.40", "date": "2026-01-06", "high": "10.50", "low": "10.10", "open": "10.25", "volume": 10000},
+      {"close": "10.10", "date": "2026-01-07", "high": "10.60", "low": "9.90", "open": "10.35", "volume": 10000},
+      {"close": "10.80", "date": "2026-01-08", "high": "10.90", "low": "10.00", "open": "10.20", "volume": 10000},
+      {"close": "10.70", "date": "2026-01-09", "high": "11.00", "low": "10.50", "open": "10.90", "volume": 10000}
+    ]
+  },
+  "strategy_config": {
+    "breakout_period": 1,
+    "buy_watch_threshold": 0,
+    "ma_long_period": 2,
+    "ma_short_period": 1,
+    "momentum_period": 1,
+    "rsi_period": 1,
+    "volatility_period": 1,
+    "volume_period": 1
+  }
+}

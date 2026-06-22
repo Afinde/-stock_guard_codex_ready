@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -r requirements.txt
+      - run: bash scripts/verify.sh
+
+  postgres-integration-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: stock_guard_test
+          POSTGRES_USER: stock_guard_test
+          POSTGRES_PASSWORD: stock_guard_test_password
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -U stock_guard_test -d stock_guard_test"
+          --health-interval 2s
+          --health-timeout 2s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -r requirements.txt
+      - name: Run PostgreSQL integration tests
+        env:
+          APP_ENV: test
+          DATABASE_URL: postgresql+psycopg://stock_guard_test:stock_guard_test_password@127.0.0.1:55432/stock_guard_test
+          ENABLE_LIVE_ORDER: "false"
+          MANUAL_CONFIRM_REQUIRED: "true"
+          MARKET_DATA_MODE: FIXTURE
+          MARKET_LIVE_ENABLED: "false"
+          MARKET_LIVE_SHADOW_MODE: "true"
+          RUN_POSTGRES_TESTS: "1"
+          PYTHONPATH: ${{ github.workspace }}
+          PGOPTIONS: "-c lock_timeout=2000 -c statement_timeout=15000"
+        run: python -m pytest -q tests/integration_postgres
