@@ -88,6 +88,27 @@ python -m app.market_data_runtime --generate-admission-review
 
 当前范围不包含容量、压力、高可用或灾备验证，也不代表生产可用。
 
+## ECS Lite 管理台部署
+
+Milestone 6A 提供 `/api/v1` 管理台 API 和 `frontend/` Vue3 静态前端，目标是阿里云 2 vCPU/2 GiB 单机 Docker Compose 部署。生产 profile 使用 `DEPLOYMENT_PROFILE=ECS_LITE`，默认保持 `ENABLE_SERVER_BACKTEST=false`、`ENABLE_PAPER_ORDER_WRITE=false`、`ENABLE_LIVE_PROVIDER=false`、`ENABLE_LIVE_ORDER=false`、`ENABLE_WEBSOCKET=false`。
+
+前端在本地构建后上传静态产物，ECS 上不常驻 Node 开发服务器：
+
+```bash
+cd frontend
+npm ci
+npm run typecheck
+npm run build
+```
+
+生产启动使用 `deploy/docker-compose.prod.yml`，只有 `web` 和 `api` 常驻；`job-runner` 通过 profile 按需运行。SQLite 数据库挂载到宿主机并启用 WAL；备份使用一致性 SQLite backup API：
+
+```bash
+bash scripts/backup_sqlite.sh --backup-dir backups/sqlite
+```
+
+Nginx 负责静态文件、SPA fallback 和 `/api` 反向代理，公网不暴露 8000。生产环境如果启用 Basic Auth，必须配合 HTTPS，避免在明文 HTTP 中发送管理凭据；数据库备份还需要同步到异机或 OSS。
+
 ## Codex 推荐开发顺序
 
 1. 在项目根目录启动 Codex，并先让它阅读 `AGENTS.md`，只做仓库审计，不立即改代码。

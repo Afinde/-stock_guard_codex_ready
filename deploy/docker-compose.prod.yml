@@ -4,7 +4,8 @@ services:
       context: ..
       dockerfile: Dockerfile.prod
     env_file:
-      - ../.env.prod
+      - path: ../.env.prod
+        required: false
     environment:
       DEPLOYMENT_PROFILE: ECS_LITE
       DATABASE_URL: sqlite:////app/data/stock_guard.db
@@ -62,7 +63,8 @@ services:
       context: ..
       dockerfile: Dockerfile.prod
     env_file:
-      - ../.env.prod
+      - path: ../.env.prod
+        required: false
     environment:
       DEPLOYMENT_PROFILE: ECS_LITE
       DATABASE_URL: sqlite:////app/data/stock_guard.db

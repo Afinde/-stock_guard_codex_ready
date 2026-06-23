@@ -1,0 +1,137 @@
+:root {
+  font-family: Inter, "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+  color: #172033;
+  background: #f5f7fb;
+}
+
+body {
+  margin: 0;
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.sidebar {
+  background: #182235;
+  color: #fff;
+}
+
+.brand {
+  height: 58px;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  font-size: 18px;
+  font-weight: 700;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.menu {
+  border-right: 0;
+  background: transparent;
+}
+
+.menu .el-menu-item {
+  color: #cbd5e1;
+}
+
+.menu .el-menu-item.is-active,
+.menu .el-menu-item:hover {
+  color: #ffffff;
+  background: #24324a;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.top-title {
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.clock {
+  color: #5f6b7a;
+  font-size: 13px;
+}
+
+.main {
+  padding: 18px;
+}
+
+.page {
+  display: grid;
+  gap: 16px;
+}
+
+.toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.metric {
+  background: #fff;
+  border: 1px solid #e7ebf1;
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.metric-label {
+  color: #667085;
+  font-size: 13px;
+}
+
+.metric-value {
+  margin-top: 8px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.panel {
+  background: #fff;
+  border: 1px solid #e7ebf1;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.panel-title {
+  margin: 0 0 12px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.chart {
+  width: 100%;
+  height: 280px;
+}
+
+.muted {
+  color: #667085;
+}
+
+.danger-text {
+  color: #b42318;
+}
+
+@media (max-width: 1100px) {
+  .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

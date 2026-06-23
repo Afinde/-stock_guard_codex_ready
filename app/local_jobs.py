@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import select
 
 from .config import get_settings
-from .db import ScheduledTaskRunRecord, SessionLocal
+from .db import ScheduledTaskRunRecord, SessionLocal, engine
 from .db_backup import backup_sqlite_database, sqlite_database_path
 from .schema import assert_schema_ready_for_writes
 from .service import scan_watchlist
@@ -33,7 +33,7 @@ def run_pending_once() -> int:
 
 def run_one(job_id: str | None = None) -> int:
     settings = get_settings()
-    assert_schema_ready_for_writes()
+    assert_schema_ready_for_writes(engine)
     with SessionLocal() as session:
         query = select(ScheduledTaskRunRecord).where(ScheduledTaskRunRecord.status.in_(["QUEUED", "RUNNING"]))
         if job_id:
