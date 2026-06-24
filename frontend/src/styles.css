@@ -64,6 +64,12 @@ body {
   font-size: 13px;
 }
 
+.user-menu {
+  cursor: pointer;
+  color: #344054;
+  font-size: 13px;
+}
+
 .main {
   padding: 18px;
 }

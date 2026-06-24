@@ -9,6 +9,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from .config import get_settings
+from .api.auth import router as auth_router
+from .api.market import router as market_router
 from .api.paper import router as paper_router
 from .api.v1 import router as v1_router
 from .db import engine
@@ -17,6 +19,7 @@ from .schema import assert_schema_ready_for_writes, validate_schema_against_meta
 from .service import latest_signals, scan_watchlist
 
 logger = logging.getLogger(__name__)
+settings = get_settings()
 
 
 @asynccontextmanager
@@ -26,11 +29,16 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="Stock Guard MVP",
-    version="0.1.0",
+    version=settings.app_version,
     description="A-share research, screening and alerting system. Live orders disabled by default.",
     lifespan=lifespan,
+    docs_url=None if settings.app_env.lower() == "prod" else "/docs",
+    redoc_url=None if settings.app_env.lower() == "prod" else "/redoc",
+    openapi_url=None if settings.app_env.lower() == "prod" else "/openapi.json",
 )
 app.include_router(paper_router)
+app.include_router(auth_router)
+app.include_router(market_router)
 app.include_router(v1_router)
 
 
@@ -95,6 +103,11 @@ def health() -> dict:
             "recommended_action": schema_report.recommended_action,
         },
     }
+
+
+@app.get("/health/live")
+def health_live() -> dict:
+    return {"status": "ok"}
 
 
 @app.post("/api/scan")

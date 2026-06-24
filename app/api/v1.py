@@ -9,10 +9,11 @@ from decimal import Decimal
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import func, select
 
 from ..config import get_settings
+from ..auth import require_user
 from ..db import (
     BacktestDailyEquityRecord,
     BacktestFillRecord,
@@ -36,7 +37,7 @@ from ..risk import stable_id
 from ..schema import schema_status, validate_schema_against_metadata
 
 
-router = APIRouter(prefix="/api/v1", tags=["v1"])
+router = APIRouter(prefix="/api/v1", tags=["v1"], dependencies=[Depends(require_user)])
 TZ = ZoneInfo("Asia/Shanghai")
 _dashboard_cache: dict[str, Any] = {"expires_at": 0.0, "value": None}
 logger = logging.getLogger(__name__)

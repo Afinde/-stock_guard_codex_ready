@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from datetime import datetime
+from decimal import Decimal
 
-from sqlalchemy import Boolean, DateTime, Float, Integer, String, Text, UniqueConstraint, create_engine, event, inspect, text
+from sqlalchemy import Boolean, DateTime, Float, Integer, Numeric, String, Text, UniqueConstraint, create_engine, event, inspect, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 from .config import get_settings
@@ -11,6 +12,51 @@ from .data_provider import utc_now
 
 class Base(DeclarativeBase):
     pass
+
+
+class UserRecord(Base):
+    __tablename__ = "users"
+    __table_args__ = (UniqueConstraint("username", name="uq_users_username"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(String(80), index=True)
+    display_name: Mapped[str] = mapped_column(String(120), default="")
+    role: Mapped[str] = mapped_column(String(16), index=True)
+    password_hash: Mapped[str] = mapped_column(String(255))
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    failed_login_count: Mapped[int] = mapped_column(Integer, default=0)
+    locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    password_changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)
+
+
+class AuthSessionRecord(Base):
+    __tablename__ = "auth_sessions"
+    __table_args__ = (UniqueConstraint("session_id", name="uq_auth_session_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    session_id: Mapped[str] = mapped_column(String(80), index=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True)
+    refresh_token_hash: Mapped[str] = mapped_column(String(64), index=True)
+    issued_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    user_agent: Mapped[str] = mapped_column(String(300), default="")
+    ip_address: Mapped[str] = mapped_column(String(80), default="")
+
+
+class LoginAuditLogRecord(Base):
+    __tablename__ = "login_audit_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(String(80), index=True)
+    user_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    success: Mapped[bool] = mapped_column(Boolean, index=True)
+    reason: Mapped[str] = mapped_column(String(80), default="")
+    ip_address: Mapped[str] = mapped_column(String(80), default="")
+    user_agent: Mapped[str] = mapped_column(String(300), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)
 
 
 class SignalRecord(Base):
@@ -457,6 +503,127 @@ class PaperOrderMarketEventRecord(Base):
     error_message: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class InstrumentRecord(Base):
+    __tablename__ = "instruments"
+    __table_args__ = (UniqueConstraint("symbol", name="uq_instruments_symbol"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    symbol: Mapped[str] = mapped_column(String(16), index=True)
+    name: Mapped[str] = mapped_column(String(120), default="")
+    exchange: Mapped[str] = mapped_column(String(16), index=True)
+    instrument_type: Mapped[str] = mapped_column(String(32), default="A_SHARE")
+    industry: Mapped[str | None] = mapped_column(String(120), nullable=True, index=True)
+    list_date: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    status: Mapped[str] = mapped_column(String(32), default="ACTIVE", index=True)
+    source: Mapped[str] = mapped_column(String(80), default="")
+    source_version: Mapped[str] = mapped_column(String(80), default="")
+    checksum: Mapped[str] = mapped_column(String(64), default="", index=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)
+
+
+class DailyBarRecord(Base):
+    __tablename__ = "daily_bars"
+    __table_args__ = (UniqueConstraint("provider", "symbol", "trading_date", "adjust", name="uq_daily_bar_provider_symbol_date_adjust"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    provider: Mapped[str] = mapped_column(String(80), index=True)
+    symbol: Mapped[str] = mapped_column(String(16), index=True)
+    trading_date: Mapped[str] = mapped_column(String(10), index=True)
+    adjust: Mapped[str] = mapped_column(String(16), default="", index=True)
+    open_price: Mapped[Decimal] = mapped_column(Numeric(18, 6))
+    high_price: Mapped[Decimal] = mapped_column(Numeric(18, 6))
+    low_price: Mapped[Decimal] = mapped_column(Numeric(18, 6))
+    close_price: Mapped[Decimal] = mapped_column(Numeric(18, 6))
+    volume: Mapped[int] = mapped_column(Integer)
+    amount: Mapped[Decimal | None] = mapped_column(Numeric(24, 4), nullable=True)
+    checksum: Mapped[str] = mapped_column(String(64), index=True)
+    quality_status: Mapped[str] = mapped_column(String(24), default="VALID", index=True)
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)
+
+
+class StockNewsRecord(Base):
+    __tablename__ = "stock_news"
+    __table_args__ = (
+        UniqueConstraint("source_url_hash", name="uq_stock_news_source_url_hash"),
+        UniqueConstraint("checksum", name="uq_stock_news_checksum"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    provider: Mapped[str] = mapped_column(String(80), index=True)
+    symbol: Mapped[str] = mapped_column(String(16), index=True)
+    title: Mapped[str] = mapped_column(String(300))
+    summary: Mapped[str] = mapped_column(Text, default="")
+    source_url: Mapped[str] = mapped_column(Text, default="")
+    source_url_hash: Mapped[str] = mapped_column(String(64), index=True)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    checksum: Mapped[str] = mapped_column(String(64), index=True)
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)
+
+
+class IndustrySnapshotRecord(Base):
+    __tablename__ = "industry_snapshots"
+    __table_args__ = (UniqueConstraint("provider", "industry_name", "market_time", "checksum", name="uq_industry_snapshot"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    provider: Mapped[str] = mapped_column(String(80), index=True)
+    industry_name: Mapped[str] = mapped_column(String(120), index=True)
+    market_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    change_pct: Mapped[Decimal | None] = mapped_column(Numeric(12, 6), nullable=True)
+    turnover: Mapped[Decimal | None] = mapped_column(Numeric(24, 4), nullable=True)
+    leading_stock: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    checksum: Mapped[str] = mapped_column(String(64), index=True)
+    quality_status: Mapped[str] = mapped_column(String(24), default="VALID", index=True)
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)
+
+
+class FinancialMetricRecord(Base):
+    __tablename__ = "financial_metrics"
+    __table_args__ = (UniqueConstraint("provider", "symbol", "report_period", "checksum", name="uq_financial_metric"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    provider: Mapped[str] = mapped_column(String(80), index=True)
+    symbol: Mapped[str] = mapped_column(String(16), index=True)
+    report_period: Mapped[str] = mapped_column(String(20), index=True)
+    metric_name: Mapped[str] = mapped_column(String(120), index=True)
+    metric_value: Mapped[Decimal | None] = mapped_column(Numeric(24, 6), nullable=True)
+    unit: Mapped[str] = mapped_column(String(32), default="")
+    checksum: Mapped[str] = mapped_column(String(64), index=True)
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)
+
+
+class DataIngestionRunRecord(Base):
+    __tablename__ = "data_ingestion_runs"
+    __table_args__ = (UniqueConstraint("run_id", name="uq_data_ingestion_run_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    run_id: Mapped[str] = mapped_column(String(120), index=True)
+    job_type: Mapped[str] = mapped_column(String(40), index=True)
+    provider: Mapped[str] = mapped_column(String(80), index=True)
+    status: Mapped[str] = mapped_column(String(32), index=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    success_count: Mapped[int] = mapped_column(Integer, default=0)
+    duplicate_count: Mapped[int] = mapped_column(Integer, default=0)
+    invalid_count: Mapped[int] = mapped_column(Integer, default=0)
+    error_count: Mapped[int] = mapped_column(Integer, default=0)
+    error_summary_json: Mapped[str] = mapped_column(Text, default="[]")
+
+
+class ProviderHealthStatusRecord(Base):
+    __tablename__ = "provider_health_status"
+    __table_args__ = (UniqueConstraint("provider", name="uq_provider_health_provider"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    provider: Mapped[str] = mapped_column(String(80), index=True)
+    status: Mapped[str] = mapped_column(String(32), index=True)
+    last_success_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_failure_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_error_type: Mapped[str] = mapped_column(String(80), default="")
+    last_error_message: Mapped[str] = mapped_column(Text, default="")
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)
 
 
 class MarketQuoteSnapshotRecord(Base):

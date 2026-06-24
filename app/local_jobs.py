@@ -10,12 +10,14 @@ from sqlalchemy import select
 from .config import get_settings
 from .db import ScheduledTaskRunRecord, SessionLocal, engine
 from .db_backup import backup_sqlite_database, sqlite_database_path
+from .data_jobs import run_market_spot, run_stock_news, run_industry
+from .public_market_data import provider_by_name
 from .schema import assert_schema_ready_for_writes
 from .service import scan_watchlist
 
 logger = logging.getLogger(__name__)
 TZ = ZoneInfo("Asia/Shanghai")
-ALLOWED_TASKS = {"WATCHLIST_SCAN", "DATA_MAINTENANCE", "SQLITE_BACKUP"}
+ALLOWED_TASKS = {"WATCHLIST_SCAN", "DATA_MAINTENANCE", "SQLITE_BACKUP", "MARKET_SPOT_SYNC", "DAILY_BAR_SYNC", "STOCK_NEWS_SYNC", "INDUSTRY_SYNC", "FINANCIAL_SYNC", "INSTRUMENT_SYNC"}
 
 
 def run_pending_once() -> int:
@@ -63,6 +65,12 @@ def run_one(job_id: str | None = None) -> int:
         elif task_type == "SQLITE_BACKUP":
             source = sqlite_database_path(settings.database_url)
             backup_sqlite_database(source, source.parent.parent / "backups" / "sqlite")
+        elif task_type == "MARKET_SPOT_SYNC":
+            run_market_spot(provider_by_name("fixture"))
+        elif task_type == "STOCK_NEWS_SYNC":
+            run_stock_news(provider_by_name("fixture"))
+        elif task_type == "INDUSTRY_SYNC":
+            run_industry(provider_by_name("fixture"))
         else:
             logger.info("data maintenance task completed without state changes", extra={"job_id": job_id})
         status, error_type, message, code = "SUCCEEDED", "", "", 0

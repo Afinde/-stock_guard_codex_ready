@@ -12,7 +12,7 @@ from sqlalchemy import UniqueConstraint, create_engine, inspect, text
 from sqlalchemy.engine import Engine
 
 
-REQUIRED_SCHEMA_REVISION = "20260622_0003"
+REQUIRED_SCHEMA_REVISION = "20260623_0005"
 
 
 @dataclass(frozen=True)

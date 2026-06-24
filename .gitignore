@@ -8,6 +8,8 @@ htmlcov/
 .cache/
 frontend/node_modules/
 frontend/dist/
+postgres-data/
+*.tar
 *.db
 *.sqlite
 *.sqlite3

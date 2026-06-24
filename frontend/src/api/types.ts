@@ -14,6 +14,12 @@ export interface Capabilities {
   websocket: boolean
 }
 
+export interface CurrentUser {
+  user_id: number
+  username: string
+  role: 'ADMIN' | 'VIEWER' | string
+}
+
 export interface Page<T> {
   items: T[]
   page: number
@@ -86,5 +92,20 @@ export interface Bar {
   ma20: number | null
   ma60: number | null
   provider: string
+  checksum: string
+}
+
+export interface MarketQuote {
+  provider: string
+  symbol: string
+  market_time: string
+  received_at: string
+  quality_status: string
+  open: string
+  high: string
+  low: string
+  close: string
+  volume: number
+  amount: string | null
   checksum: string
 }

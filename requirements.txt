@@ -11,3 +11,5 @@ python-dotenv>=1.1,<2
 pytest>=8.3,<9
 psycopg[binary]>=3.2,<4
 alembic>=1.14,<2
+pwdlib[argon2]>=0.2,<1
+PyJWT>=2.10,<3

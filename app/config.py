@@ -21,6 +21,13 @@ class Settings(BaseSettings):
     enable_websocket: bool = False
     max_page_size: int = Field(default=100, ge=1)
     dashboard_cache_seconds: int = Field(default=30, ge=0)
+    auth_required: bool = True
+    auth_jwt_secret: str = ""
+    auth_access_token_minutes: int = Field(default=30, ge=1)
+    auth_refresh_token_days: int = Field(default=7, ge=1)
+    auth_cookie_secure: bool = False
+    auth_login_failure_limit: int = Field(default=5, ge=1)
+    auth_lockout_minutes: int = Field(default=15, ge=1)
     database_url: str = "sqlite:///./data/stock_guard.db"
     timezone: str = "Asia/Shanghai"
     account_equity: float = 100_000.0
@@ -213,6 +220,11 @@ class Settings(BaseSettings):
     def validate_strategy_config(self):
         if self.deployment_profile not in {"LOCAL", "ECS_LITE"}:
             raise ValueError("deployment_profile must be LOCAL or ECS_LITE")
+        if self.app_env.lower() == "prod":
+            if not self.auth_jwt_secret or len(self.auth_jwt_secret) < 32:
+                raise ValueError("AUTH_JWT_SECRET must be at least 32 characters in production")
+            if not self.auth_cookie_secure:
+                raise ValueError("AUTH_COOKIE_SECURE must be true in production")
         if not self.api_prefix.startswith("/api/"):
             raise ValueError("api_prefix must start with /api/")
         if self.max_page_size > 1000:

@@ -17,7 +17,8 @@ POSTGRES_TEST_DB="${POSTGRES_TEST_DB:-stock_guard_test}"
 POSTGRES_TEST_USER="${POSTGRES_TEST_USER:-stock_guard_test}"
 POSTGRES_TEST_PASSWORD="${POSTGRES_TEST_PASSWORD:-stock_guard_test_password}"
 COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-stock_guard_pg_test}"
-export POSTGRES_TEST_PORT POSTGRES_TEST_DB POSTGRES_TEST_USER POSTGRES_TEST_PASSWORD COMPOSE_PROJECT_NAME
+POSTGRES_TEST_PULL_POLICY="${POSTGRES_TEST_PULL_POLICY:-never}"
+export POSTGRES_TEST_PORT POSTGRES_TEST_DB POSTGRES_TEST_USER POSTGRES_TEST_PASSWORD COMPOSE_PROJECT_NAME POSTGRES_TEST_PULL_POLICY
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "Docker is required for PostgreSQL integration tests." >&2
@@ -29,7 +30,7 @@ if ! docker info >/dev/null 2>&1; then
 fi
 
 COMPOSE=(docker compose -f docker-compose.postgres-test.yml)
-"${COMPOSE[@]}" up -d
+"${COMPOSE[@]}" up -d --pull "$POSTGRES_TEST_PULL_POLICY"
 
 cleanup() {
   status=$?

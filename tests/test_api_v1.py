@@ -12,6 +12,9 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app import main as app_main
+from app import auth as auth_service
+from app.api import auth as auth_api
+from app.api import market as market_api
 from app.api import paper as paper_api
 from app.api import v1
 from app.db import (
@@ -28,6 +31,7 @@ from app.db import (
     PaperPositionRecord,
     ScheduledTaskRunRecord,
     SignalRecord,
+    UserRecord,
 )
 
 TZ = ZoneInfo("Asia/Shanghai")
@@ -35,8 +39,8 @@ TZ = ZoneInfo("Asia/Shanghai")
 
 @dataclass(frozen=True)
 class FakeSchemaReport:
-    current_revision: str = "20260622_0003"
-    target_revision: str = "20260622_0003"
+    current_revision: str = "20260623_0005"
+    target_revision: str = "20260623_0005"
     migration_required: bool = False
     recommended_action: str = "none"
 
@@ -49,6 +53,10 @@ def Session(monkeypatch):
     monkeypatch.setattr(v1, "SessionLocal", Session)
     monkeypatch.setattr(v1, "engine", engine)
     monkeypatch.setattr(v1, "validate_schema_against_metadata", lambda _engine: FakeSchemaReport())
+    monkeypatch.setattr(auth_service, "SessionLocal", Session)
+    monkeypatch.setattr(auth_api, "SessionLocal", Session)
+    monkeypatch.setattr(market_api, "SessionLocal", Session)
+    monkeypatch.setattr(market_api, "engine", engine, raising=False)
     v1._dashboard_cache.update({"expires_at": 0.0, "value": None})
     return Session
 
@@ -208,8 +216,36 @@ def seed(Session):
         session.commit()
 
 
+def login(client, Session, *, role: str = "ADMIN"):
+    now = datetime(2026, 1, 5, 9, 0, tzinfo=TZ)
+    with Session() as session:
+        if session.query(UserRecord).count() == 0:
+            session.add(
+                UserRecord(
+                    username="admin",
+                    display_name="Admin",
+                    role=role,
+                    password_hash=auth_service.hash_password("LongPassword123!"),
+                    password_changed_at=now,
+                    created_at=now,
+                    updated_at=now,
+                )
+            )
+            session.commit()
+    response = client.post("/api/v1/auth/login", json={"username": "admin", "password": "LongPassword123!"})
+    assert response.status_code == 200
+    return response
+
+
+def test_anonymous_v1_business_api_requires_login(client):
+    response = client.get("/api/v1/dashboard/summary")
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "AUTH_REQUIRED"
+
+
 def test_dashboard_summary_and_capabilities(client, Session):
     seed(Session)
+    login(client, Session)
     response = client.get("/api/v1/dashboard/summary", headers={"X-Request-Id": "rid-1"})
     assert response.status_code == 200
     body = response.json()
@@ -222,6 +258,7 @@ def test_dashboard_summary_and_capabilities(client, Session):
 
 def test_signals_pagination_filter_and_detail(client, Session):
     seed(Session)
+    login(client, Session)
     listed = client.get("/api/v1/signals", params={"page": 1, "page_size": 20, "symbol": "600519.SH", "signal_type": "BUY_WATCH"})
     assert listed.status_code == 200
     page = listed.json()["data"]
@@ -235,6 +272,7 @@ def test_signals_pagination_filter_and_detail(client, Session):
 
 def test_bars_limit_backtests_and_paper_read_only(client, Session):
     seed(Session)
+    login(client, Session)
     bars = client.get("/api/v1/stocks/600519.SH/bars", params={"limit": 1200})
     assert bars.status_code == 200
     assert bars.json()["data"]["items"][0]["checksum"] == "bar-checksum"
@@ -252,6 +290,7 @@ def test_bars_limit_backtests_and_paper_read_only(client, Session):
 
 def test_system_status_jobs_errors_and_legacy_compatibility(client, Session):
     seed(Session)
+    login(client, Session)
     system = client.get("/api/v1/system/status")
     assert system.status_code == 200
     assert "database_path" not in system.text
@@ -271,7 +310,8 @@ def test_system_status_jobs_errors_and_legacy_compatibility(client, Session):
     assert legacy.status_code == 200
 
 
-def test_page_size_cap_and_disabled_backtest_creation(client):
+def test_page_size_cap_and_disabled_backtest_creation(client, Session):
+    login(client, Session)
     oversized = client.get("/api/v1/signals", params={"page_size": 101})
     assert oversized.status_code == 422
 

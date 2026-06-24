@@ -8,7 +8,7 @@ services:
         required: false
     environment:
       DEPLOYMENT_PROFILE: ECS_LITE
-      DATABASE_URL: sqlite:////app/data/stock_guard.db
+      DATABASE_URL: postgresql+psycopg://root:123456@postgres:5432/stock_guard
       ENABLE_SERVER_BACKTEST: "false"
       ENABLE_PAPER_ORDER_WRITE: "false"
       ENABLE_LIVE_PROVIDER: "false"
@@ -16,6 +16,9 @@ services:
       ENABLE_WEBSOCKET: "false"
     expose:
       - "8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
     volumes:
       - ../data:/app/data
       - ../reports:/app/reports
@@ -67,7 +70,7 @@ services:
         required: false
     environment:
       DEPLOYMENT_PROFILE: ECS_LITE
-      DATABASE_URL: sqlite:////app/data/stock_guard.db
+      DATABASE_URL: postgresql+psycopg://root:123456@postgres:5432/stock_guard
       ENABLE_SERVER_BACKTEST: "false"
       ENABLE_PAPER_ORDER_WRITE: "false"
       ENABLE_LIVE_PROVIDER: "false"
@@ -81,6 +84,34 @@ services:
     mem_limit: 560m
     cpus: 0.75
     pids_limit: 128
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: stock_guard
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: "123456"
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    command: ["postgres", "-c", "max_connections=20", "-c", "shared_buffers=128MB"]
+    expose:
+      - "5432"
+    volumes:
+      - ../postgres-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    mem_limit: 448m
+    cpus: 0.5
+    pids_limit: 128
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d stock_guard"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     logging:
       driver: json-file
       options:
