@@ -17,7 +17,7 @@ from app import main as app_main
 from app.api import auth as auth_api
 from app.api import market as market_api
 from app.api import v1
-from app.db import AuthSessionRecord, Base, DataIngestionRunRecord, LoginAuditLogRecord, MarketQuoteSnapshotRecord, ProviderHealthStatusRecord, SessionLocal, UserRecord
+from app.db import AuthSessionRecord, Base, DataIngestionRunRecord, InstrumentRecord, LoginAuditLogRecord, MarketQuoteSnapshotRecord, ProviderHealthStatusRecord, SessionLocal, UserRecord
 from app.public_market_data import FixtureProvider, normalize_eastmoney_spot
 
 TZ = ZoneInfo("Asia/Shanghai")
@@ -139,6 +139,7 @@ def test_fixture_market_spot_ingestion_is_idempotent(Session, monkeypatch):
     assert first == second == 0
     with Session() as session:
         assert session.query(MarketQuoteSnapshotRecord).count() == 2
+        assert session.query(InstrumentRecord).filter_by(symbol="600519.SH", name="贵州茅台").count() == 1
         assert session.query(ProviderHealthStatusRecord).filter_by(provider="fixture", status="HEALTHY").count() == 1
         runs = session.scalars(select(DataIngestionRunRecord).order_by(DataIngestionRunRecord.started_at.asc())).all()
         assert runs[0].success_count == 2

@@ -18,7 +18,7 @@ from ..db import (
     StockNewsRecord,
 )
 from ..risk import stable_id
-from .v1 import ok, page
+from .v1 import _job, ok, page
 
 router = APIRouter(prefix="/api/v1", tags=["market"], dependencies=[Depends(require_user)])
 
@@ -103,7 +103,8 @@ def admin_run_data_job(job_type: str, request: Request, _: CurrentUser = Depends
         row = ScheduledTaskRunRecord(task_run_id=job_id, task_key=job_id, task_type=normalized, session_date=now.date().isoformat(), status="QUEUED", attempt=1, started_at=now)
         session.add(row)
         session.commit()
-    return ok(request, {"job_id": job_id, "task_type": normalized, "status": "QUEUED"})
+        session.refresh(row)
+        return ok(request, _job(row))
 
 
 def _quote(row: MarketQuoteSnapshotRecord) -> dict[str, Any]:

@@ -12,6 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from .config import get_settings
 from .db import (
     DataIngestionRunRecord,
+    InstrumentRecord,
     IndustrySnapshotRecord,
     MarketQuoteSnapshotRecord,
     ProviderHealthStatusRecord,
@@ -143,8 +144,10 @@ def _save_spot(provider: PublicMarketProvider, run: DataIngestionRunRecord) -> N
                 calendar_version="public-market",
                 raw_schema_version="6b-v1",
                 quality_status="VALID",
+                payload_json=json.dumps({"name": quote.name}, ensure_ascii=False, sort_keys=True),
             )
             session.add(row)
+            _upsert_instrument(session, quote)
             try:
                 session.flush()
                 run.success_count += 1
@@ -185,6 +188,11 @@ def _save_industries(provider: PublicMarketProvider, run: DataIngestionRunRecord
                 run.duplicate_count += 1
                 continue
             session.add(IndustrySnapshotRecord(provider=item.provider, industry_name=item.industry_name, market_time=item.market_time, change_pct=item.change_pct, turnover=item.turnover, leading_stock=item.leading_stock, checksum=item.checksum, received_at=datetime.now(timezone.utc)))
+            if item.leading_stock:
+                instrument = session.scalars(select(InstrumentRecord).where(InstrumentRecord.symbol == item.leading_stock)).first()
+                if instrument is not None and not instrument.industry:
+                    instrument.industry = item.industry_name
+                    instrument.updated_at = datetime.now(timezone.utc)
             try:
                 session.flush()
                 run.success_count += 1
@@ -211,6 +219,18 @@ def _provider_health(session, provider: str, status: str, exc: Exception | None)
         row.last_failure_at = now
         row.last_error_type = type(exc).__name__
         row.last_error_message = str(exc)[:500]
+
+
+def _upsert_instrument(session, quote) -> None:
+    row = session.scalars(select(InstrumentRecord).where(InstrumentRecord.symbol == quote.symbol)).first()
+    if row is None:
+        row = InstrumentRecord(symbol=quote.symbol, name=quote.name, exchange=quote.exchange, source=quote.provider, updated_at=datetime.now(timezone.utc))
+        session.add(row)
+        return
+    row.name = quote.name or row.name
+    row.exchange = quote.exchange or row.exchange
+    row.source = quote.provider
+    row.updated_at = datetime.now(timezone.utc)
 
 
 if __name__ == "__main__":

@@ -109,3 +109,36 @@ export interface MarketQuote {
   amount: string | null
   checksum: string
 }
+
+export interface StockRecommendation {
+  symbol: string
+  name: string
+  sector: string
+  signal_type: string
+  score: number
+  rank_score: number
+  reference_price: string | number | null
+  latest_price: string | number | null
+  market_time: string
+  stop_loss_price: string | number | null
+  take_profit_1_price: string | number | null
+  take_profit_2_price: string | number | null
+  suggested_shares: number
+  reasons: string[]
+  invalidation_conditions: string[]
+  generated_at: string
+  market_trade_date: string
+  research_only: boolean
+}
+
+export interface SectorRecommendation {
+  sector: string
+  provider: string
+  rank_score: number
+  change_pct: string | null
+  turnover: string | null
+  leading_stock: string
+  market_time: string
+  reason: string
+  research_only: boolean
+}

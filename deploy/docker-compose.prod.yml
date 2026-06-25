@@ -90,6 +90,72 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  scheduler:
+    build:
+      context: ..
+      dockerfile: Dockerfile.prod
+    env_file:
+      - path: ../.env.prod
+        required: false
+    environment:
+      DEPLOYMENT_PROFILE: ECS_LITE
+      DATABASE_URL: postgresql+psycopg://root:123456@postgres:5432/stock_guard
+      ENABLE_SERVER_BACKTEST: "false"
+      ENABLE_PAPER_ORDER_WRITE: "false"
+      ENABLE_LIVE_PROVIDER: "false"
+      ENABLE_LIVE_ORDER: "false"
+      ENABLE_WEBSOCKET: "false"
+    command: ["python", "-m", "app.scheduler"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ../data:/app/data
+      - ../reports:/app/reports
+      - ../backups:/app/backups
+    restart: unless-stopped
+    mem_limit: 384m
+    cpus: 0.5
+    pids_limit: 128
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  job-worker:
+    build:
+      context: ..
+      dockerfile: Dockerfile.prod
+    env_file:
+      - path: ../.env.prod
+        required: false
+    environment:
+      DEPLOYMENT_PROFILE: ECS_LITE
+      DATABASE_URL: postgresql+psycopg://root:123456@postgres:5432/stock_guard
+      ENABLE_SERVER_BACKTEST: "false"
+      ENABLE_PAPER_ORDER_WRITE: "false"
+      ENABLE_LIVE_PROVIDER: "false"
+      ENABLE_LIVE_ORDER: "false"
+      ENABLE_WEBSOCKET: "false"
+    command: ["sh", "-c", "while true; do python -m app.local_jobs --run-pending-once; sleep $${LOCAL_JOB_POLL_SECONDS:-10}; done"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ../data:/app/data
+      - ../reports:/app/reports
+      - ../backups:/app/backups
+    restart: unless-stopped
+    mem_limit: 384m
+    cpus: 0.5
+    pids_limit: 128
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   postgres:
     image: postgres:16-alpine
     environment:

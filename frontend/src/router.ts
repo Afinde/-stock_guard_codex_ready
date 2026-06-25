@@ -6,6 +6,7 @@ const router = createRouter({
   routes: [
     { path: '/login', name: 'login', meta: { public: true }, component: () => import('./views/LoginView.vue') },
     { path: '/', name: 'dashboard', component: () => import('./views/DashboardView.vue') },
+    { path: '/recommendations', name: 'recommendations', component: () => import('./views/RecommendationsView.vue') },
     { path: '/signals', name: 'signals', component: () => import('./views/SignalsView.vue') },
     { path: '/market', name: 'market', component: () => import('./views/MarketView.vue') },
     { path: '/stocks/:symbol?', name: 'stocks', component: () => import('./views/StockView.vue') },

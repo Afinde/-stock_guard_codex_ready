@@ -3,9 +3,10 @@
   <el-container v-else class="app-shell">
     <el-aside width="216px" class="sidebar">
       <div class="brand">Stock Guard</div>
-      <el-menu router :default-active="$route.path" class="menu">
-        <el-menu-item index="/">首页</el-menu-item>
-        <el-menu-item index="/signals">选股信号</el-menu-item>
+        <el-menu router :default-active="$route.path" class="menu">
+          <el-menu-item index="/">首页</el-menu-item>
+          <el-menu-item index="/recommendations">每日推荐</el-menu-item>
+          <el-menu-item index="/signals">选股信号</el-menu-item>
         <el-menu-item index="/market">市场数据</el-menu-item>
         <el-menu-item index="/stocks">股票详情</el-menu-item>
         <el-menu-item index="/backtests">回测结果</el-menu-item>

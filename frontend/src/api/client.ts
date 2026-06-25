@@ -1,5 +1,5 @@
 import axios, { AxiosError } from 'axios'
-import type { ApiEnvelope, Bar, CurrentUser, DashboardSummary, Job, MarketQuote, Page, Signal } from './types'
+import type { ApiEnvelope, Bar, CurrentUser, DashboardSummary, Job, MarketQuote, Page, SectorRecommendation, Signal, StockRecommendation } from './types'
 
 export const api = axios.create({
   baseURL: '/api/v1',
@@ -71,7 +71,9 @@ export const backend = {
   marketQuotes: (params: Record<string, unknown>) => unwrap<Page<MarketQuote>>(api.get('/market/quotes', { params })),
   marketNews: (params: Record<string, unknown>) => unwrap<Page<Record<string, unknown>>>(api.get('/market/news', { params })),
   industries: () => unwrap<Page<Record<string, unknown>>>(api.get('/market/industries')),
+  stockRecommendations: (params: Record<string, unknown>) => unwrap<{ phase: string; generated_at: string; research_only: boolean; items: StockRecommendation[] }>(api.get('/recommendations/stocks', { params })),
+  sectorRecommendations: (params: Record<string, unknown>) => unwrap<{ phase: string; generated_at: string; research_only: boolean; items: SectorRecommendation[] }>(api.get('/recommendations/sectors', { params })),
   providerStatus: () => unwrap<{ status: string; items: Array<Record<string, unknown>> }>(api.get('/market/provider-status')),
   ingestionRuns: () => unwrap<Page<Record<string, unknown>>>(api.get('/system/ingestion-runs')),
-  runDataJob: (jobType: string) => unwrap<Record<string, unknown>>(api.post(`/admin/data-jobs/${jobType}/run`))
+  runDataJob: (jobType: string) => unwrap<Job>(api.post(`/admin/data-jobs/${jobType}/run`))
 }

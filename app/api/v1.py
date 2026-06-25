@@ -35,6 +35,7 @@ from ..db import (
 )
 from ..risk import stable_id
 from ..schema import schema_status, validate_schema_against_metadata
+from ..recommendations import sector_recommendations, stock_recommendations
 
 
 router = APIRouter(prefix="/api/v1", tags=["v1"], dependencies=[Depends(require_user)])
@@ -163,6 +164,18 @@ def signal_detail(request: Request, signal_id: int) -> dict[str, Any]:
         if row is None:
             raise HTTPException(status_code=404, detail="signal not found")
         return ok(request, _signal(row))
+
+
+@router.get("/recommendations/stocks")
+def recommended_stocks(request: Request, phase: str = "manual", limit: int = Query(20, ge=1, le=100)) -> dict[str, Any]:
+    with SessionLocal() as session:
+        return ok(request, stock_recommendations(session, phase=phase, limit=limit))
+
+
+@router.get("/recommendations/sectors")
+def recommended_sectors(request: Request, phase: str = "manual", limit: int = Query(20, ge=1, le=100)) -> dict[str, Any]:
+    with SessionLocal() as session:
+        return ok(request, sector_recommendations(session, phase=phase, limit=limit))
 
 
 @router.get("/stocks/{symbol}/overview")

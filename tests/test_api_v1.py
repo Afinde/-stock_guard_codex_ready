@@ -23,6 +23,8 @@ from app.db import (
     BacktestOrderRecord,
     BacktestRunRecord,
     Base,
+    IndustrySnapshotRecord,
+    InstrumentRecord,
     MarketQuoteSnapshotRecord,
     PaperAccountRecord,
     PaperAccountSnapshotRecord,
@@ -69,6 +71,29 @@ def client(Session):
 def seed(Session):
     now = datetime(2026, 1, 5, 15, 1, tzinfo=TZ)
     with Session() as session:
+        session.add(
+            InstrumentRecord(
+                symbol="600519.SH",
+                name="贵州茅台",
+                exchange="SH",
+                industry="白酒",
+                source="fixture",
+                updated_at=now,
+            )
+        )
+        session.add(
+            IndustrySnapshotRecord(
+                provider="fixture",
+                industry_name="白酒",
+                market_time=now,
+                change_pct="0.0123",
+                turnover="800000000.00",
+                leading_stock="600519.SH",
+                checksum="industry-checksum",
+                quality_status="VALID",
+                received_at=now,
+            )
+        )
         session.add(
             SignalRecord(
                 symbol="600519.SH",
@@ -270,6 +295,25 @@ def test_signals_pagination_filter_and_detail(client, Session):
     assert detail.json()["data"]["strategy_version"] == "1.0.0"
 
 
+def test_recommendations_include_stock_name_and_sector(client, Session):
+    seed(Session)
+    login(client, Session)
+    stocks = client.get("/api/v1/recommendations/stocks", params={"phase": "pre_market"})
+    assert stocks.status_code == 200
+    stock = stocks.json()["data"]["items"][0]
+    assert stock["symbol"] == "600519.SH"
+    assert stock["name"] == "贵州茅台"
+    assert stock["sector"] == "白酒"
+    assert stock["research_only"] is True
+
+    sectors = client.get("/api/v1/recommendations/sectors", params={"phase": "post_market"})
+    assert sectors.status_code == 200
+    sector = sectors.json()["data"]["items"][0]
+    assert sector["sector"] == "白酒"
+    assert sector["leading_stock"] == "600519.SH"
+    assert sector["research_only"] is True
+
+
 def test_bars_limit_backtests_and_paper_read_only(client, Session):
     seed(Session)
     login(client, Session)
@@ -308,6 +352,22 @@ def test_system_status_jobs_errors_and_legacy_compatibility(client, Session):
 
     legacy = client.get("/api/signals")
     assert legacy.status_code == 200
+
+
+def test_admin_data_job_trigger_is_visible_in_system_jobs(client, Session):
+    login(client, Session)
+    created = client.post("/api/v1/admin/data-jobs/market-spot-sync/run")
+    assert created.status_code == 200
+    assert created.json()["data"]["task_type"] == "MARKET_SPOT_SYNC"
+    assert created.json()["data"]["status"] == "QUEUED"
+
+    jobs = client.get("/api/v1/system/jobs")
+    assert jobs.status_code == 200
+    assert jobs.json()["data"]["items"][0]["task_type"] == "MARKET_SPOT_SYNC"
+    assert jobs.json()["data"]["items"][0]["status"] == "QUEUED"
+
+    duplicate = client.post("/api/v1/admin/data-jobs/market-spot-sync/run")
+    assert duplicate.status_code == 409
 
 
 def test_page_size_cap_and_disabled_backtest_creation(client, Session):

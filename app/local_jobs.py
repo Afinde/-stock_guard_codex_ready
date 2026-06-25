@@ -17,7 +17,8 @@ from .service import scan_watchlist
 
 logger = logging.getLogger(__name__)
 TZ = ZoneInfo("Asia/Shanghai")
-ALLOWED_TASKS = {"WATCHLIST_SCAN", "DATA_MAINTENANCE", "SQLITE_BACKUP", "MARKET_SPOT_SYNC", "DAILY_BAR_SYNC", "STOCK_NEWS_SYNC", "INDUSTRY_SYNC", "FINANCIAL_SYNC", "INSTRUMENT_SYNC"}
+RECOMMENDATION_TASKS = {"PRE_MARKET_RECOMMENDATION", "POST_MARKET_RECOMMENDATION"}
+ALLOWED_TASKS = {"WATCHLIST_SCAN", "DATA_MAINTENANCE", "SQLITE_BACKUP", "MARKET_SPOT_SYNC", "DAILY_BAR_SYNC", "STOCK_NEWS_SYNC", "INDUSTRY_SYNC", "FINANCIAL_SYNC", "INSTRUMENT_SYNC", *RECOMMENDATION_TASKS}
 
 
 def run_pending_once() -> int:
@@ -71,6 +72,12 @@ def run_one(job_id: str | None = None) -> int:
             run_stock_news(provider_by_name("fixture"))
         elif task_type == "INDUSTRY_SYNC":
             run_industry(provider_by_name("fixture"))
+        elif task_type in RECOMMENDATION_TASKS:
+            provider = provider_by_name("fixture")
+            run_market_spot(provider)
+            run_industry(provider)
+            if settings.enable_light_scan:
+                scan_watchlist()
         else:
             logger.info("data maintenance task completed without state changes", extra={"job_id": job_id})
         status, error_type, message, code = "SUCCEEDED", "", "", 0
