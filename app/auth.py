@@ -81,14 +81,15 @@ def create_refresh_token() -> str:
     return secrets.token_urlsafe(48)
 
 
-def set_auth_cookies(response: Response, *, access_token: str, refresh_token: str) -> None:
+def set_auth_cookies(response: Response, *, access_token: str, refresh_token: str, request: Request | None = None) -> None:
     settings = get_settings()
+    secure_cookie = _secure_cookie_for_request(request, configured_secure=settings.auth_cookie_secure)
     response.set_cookie(
         ACCESS_COOKIE,
         access_token,
         max_age=settings.auth_access_token_minutes * 60,
         httponly=True,
-        secure=settings.auth_cookie_secure,
+        secure=secure_cookie,
         samesite="lax",
         path="/",
     )
@@ -97,7 +98,7 @@ def set_auth_cookies(response: Response, *, access_token: str, refresh_token: st
         refresh_token,
         max_age=settings.auth_refresh_token_days * 24 * 3600,
         httponly=True,
-        secure=settings.auth_cookie_secure,
+        secure=secure_cookie,
         samesite="lax",
         path="/api/v1/auth",
     )
@@ -161,7 +162,7 @@ def login_user(
         _audit(session, username=normalized, user_id=user.id, success=True, reason="LOGIN", request=request, now=now)
         session.commit()
         access_token = create_access_token(user=user, session_id=session_id)
-        set_auth_cookies(response, access_token=access_token, refresh_token=refresh_token)
+        set_auth_cookies(response, access_token=access_token, refresh_token=refresh_token, request=request)
         return CurrentUser(user_id=user.id, username=user.username, role=user.role, session_id=session_id)
 
 
@@ -187,7 +188,7 @@ def refresh_user_session(*, request: Request, response: Response, session_factor
         row.expires_at = now + timedelta(days=settings.auth_refresh_token_days)
         session.commit()
         access = create_access_token(user=user, session_id=row.session_id)
-        set_auth_cookies(response, access_token=access, refresh_token=new_refresh)
+        set_auth_cookies(response, access_token=access, refresh_token=new_refresh, request=request)
         return CurrentUser(user_id=user.id, username=user.username, role=user.role, session_id=row.session_id)
 
 
@@ -292,6 +293,17 @@ def _client_ip(request: Request) -> str:
 def _is_locked(user: UserRecord, now: datetime) -> bool:
     locked_until = _aware_utc(user.locked_until)
     return locked_until is not None and locked_until > now
+
+
+def _secure_cookie_for_request(request: Request | None, *, configured_secure: bool) -> bool:
+    if not configured_secure:
+        return False
+    if request is None:
+        return True
+    forwarded_proto = request.headers.get("x-forwarded-proto", "")
+    if forwarded_proto:
+        return forwarded_proto.split(",", 1)[0].strip().lower() == "https"
+    return request.url.scheme == "https"
 
 
 def _jwt_secret() -> str:

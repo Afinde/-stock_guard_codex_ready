@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
 import pandas as pd
@@ -16,7 +17,7 @@ from app import main as app_main
 from app.api import auth as auth_api
 from app.api import market as market_api
 from app.api import v1
-from app.db import AuthSessionRecord, Base, DataIngestionRunRecord, LoginAuditLogRecord, MarketQuoteSnapshotRecord, SessionLocal, UserRecord
+from app.db import AuthSessionRecord, Base, DataIngestionRunRecord, LoginAuditLogRecord, MarketQuoteSnapshotRecord, ProviderHealthStatusRecord, SessionLocal, UserRecord
 from app.public_market_data import FixtureProvider, normalize_eastmoney_spot
 
 TZ = ZoneInfo("Asia/Shanghai")
@@ -71,6 +72,25 @@ def test_login_success_error_password_and_unknown_user_audit(client, Session):
         assert session.query(LoginAuditLogRecord).count() == 3
 
 
+def test_secure_cookie_is_not_set_for_http_direct_ip_access(client, Session, monkeypatch):
+    monkeypatch.setattr(auth_service, "get_settings", lambda: _auth_settings(cookie_secure=True))
+    add_user(Session)
+    response = client.post("/api/v1/auth/login", json={"username": "admin", "password": "LongPassword123!"})
+    assert response.status_code == 200
+    set_cookie = "\n".join(response.headers.get_list("set-cookie"))
+    assert "sg_access_token=" in set_cookie
+    assert "Secure" not in set_cookie
+    assert client.get("/api/v1/auth/me").status_code == 200
+
+
+def test_secure_cookie_is_set_when_forwarded_proto_is_https(client, Session, monkeypatch):
+    monkeypatch.setattr(auth_service, "get_settings", lambda: _auth_settings(cookie_secure=True))
+    add_user(Session)
+    response = client.post("/api/v1/auth/login", headers={"x-forwarded-proto": "https"}, json={"username": "admin", "password": "LongPassword123!"})
+    assert response.status_code == 200
+    assert "Secure" in "\n".join(response.headers.get_list("set-cookie"))
+
+
 def test_login_lockout_refresh_logout_and_disabled_user(client, Session):
     user_id = add_user(Session)
     for _ in range(5):
@@ -119,6 +139,19 @@ def test_fixture_market_spot_ingestion_is_idempotent(Session, monkeypatch):
     assert first == second == 0
     with Session() as session:
         assert session.query(MarketQuoteSnapshotRecord).count() == 2
+        assert session.query(ProviderHealthStatusRecord).filter_by(provider="fixture", status="HEALTHY").count() == 1
         runs = session.scalars(select(DataIngestionRunRecord).order_by(DataIngestionRunRecord.started_at.asc())).all()
         assert runs[0].success_count == 2
         assert runs[1].duplicate_count == 2
+
+
+def _auth_settings(*, cookie_secure: bool) -> SimpleNamespace:
+    return SimpleNamespace(
+        auth_access_token_minutes=30,
+        auth_refresh_token_days=7,
+        auth_cookie_secure=cookie_secure,
+        auth_login_failure_limit=5,
+        auth_lockout_minutes=15,
+        auth_required=True,
+        auth_jwt_secret="x" * 64,
+    )

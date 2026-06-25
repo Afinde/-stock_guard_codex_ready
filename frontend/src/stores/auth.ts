@@ -17,7 +17,8 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function login(username: string, password: string) {
-    user.value = await backend.login(username, password)
+    await backend.login(username, password)
+    user.value = await backend.me()
     loaded.value = true
   }
 

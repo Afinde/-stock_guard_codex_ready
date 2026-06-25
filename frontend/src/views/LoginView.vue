@@ -40,7 +40,7 @@ async function submit() {
     router.push(String(route.query.redirect || '/'))
   } catch (exc) {
     const err = exc as ApiClientError
-    error.value = err.message || '登录失败'
+    error.value = err.code === 'AUTH_REQUIRED' ? '登录会话未建立，请确认访问地址和服务端 Cookie 配置一致后重试' : err.message || '登录失败'
   } finally {
     loading.value = false
   }
